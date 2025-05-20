@@ -1,0 +1,14 @@
+services:
+- type: web
+  name: ib-essay-grader
+  env: python
+  buildCommand: ""
+  startCommand: gunicorn main:app --bind 0.0.0.0:10000
+  envVars:
+    - key: OPENAI_API_KEY
+      sync: false
+    - key: STRIPE_SECRET_KEY
+      sync: false
+    - key: STRIPE_PRICE_ID
+      sync: false
+  plan: free
