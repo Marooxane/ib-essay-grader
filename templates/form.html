@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>IB Essay Grader</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+  <!-- Navigation Bar -->
+  <nav class="bg-white shadow mb-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between h-16 items-center">
+      <h1 class="text-xl font-bold text-blue-600">IB Essay Grader</h1>
+      <div class="space-x-6">
+        <a href="#" class="text-gray-700 hover:text-blue-600">Home</a>
+        <a href="#upload" class="text-gray-700 hover:text-blue-600">Upload Essay</a>
+        <a href="#feedback" class="text-gray-700 hover:text-blue-600">Feedback</a>
+        <a href="#about" class="text-gray-700 hover:text-blue-600">About</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Upload Interface -->
+  <section id="upload" class="max-w-3xl mx-auto px-6">
+    <h2 class="text-2xl font-bold mb-6 text-center">Submit Your Essay for Grading</h2>
+
+    <form id="graderForm" class="bg-white p-6 rounded shadow space-y-6">
+      <div>
+        <label for="subject" class="block font-medium">Subject</label>
+        <select id="subject" name="subject" class="w-full mt-1 p-2 border rounded">
+          <option value="English A">English A</option>
+          <option value="History">History</option>
+          <option value="Economics">Economics</option>
+          <option value="Biology">Biology</option>
+          <option value="Theory of Knowledge">Theory of Knowledge</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="paper" class="block font-medium">Paper Type</label>
+        <select id="paper" name="paper" class="w-full mt-1 p-2 border rounded"></select>
+      </div>
+
+      <div>
+        <label for="essay" class="block font-medium">Paste Your Essay</label>
+        <textarea id="essay" name="essay" rows="8" class="w-full mt-1 p-2 border rounded" placeholder="Paste your IB response here..."></textarea>
+      </div>
+
+      <div class="text-center">
+        <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">
+          Grade Essay
+        </button>
+      </div>
+
+      <div class="text-center mt-6">
+        <p class="text-sm text-gray-600 mb-2">Want unlimited access?</p>
+        <button id="subscribeBtn" type="button" class="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">
+          Subscribe for Unlimited Grading
+        </button>
+      </div>
+    </form>
+  </section>
+
+  <!-- Feedback Display -->
+  <section id="feedback" class="max-w-3xl mx-auto mt-12 px-6">
+    <h2 class="text-xl font-bold mb-4">Latest Feedback</h2>
+    <div id="result" class="bg-white p-4 rounded shadow text-sm whitespace-pre-wrap"></div>
+  </section>
+
+  <!-- Script -->
+  <script>
+    const subjectSelect = document.getElementById('subject');
+    const paperSelect = document.getElementById('paper');
+    const resultDiv = document.getElementById('result');
+
+    const paperOptions = {
+      "English A": ["Paper 1", "Paper 2"],
+      "History": ["Paper 1", "Paper 2", "Paper 3"],
+      "Economics": ["Paper 1", "Paper 2"],
+      "Biology": ["Paper 1", "Paper 2", "Paper 3"],
+      "Theory of Knowledge": ["Exhibition", "Essay"]
+    };
+
+    function updatePapers() {
+      const subject = subjectSelect.value;
+      const papers = paperOptions[subject] || [];
+      paperSelect.innerHTML = papers.map(p => `<option>${p}</option>`).join('');
+    }
+
+    subjectSelect.addEventListener('change', updatePapers);
+    updatePapers();
+
+    document.getElementById('graderForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const essay = document.getElementById('essay').value;
+      const subject = subjectSelect.value;
+      const paper = paperSelect.value;
+
+      if (!essay.trim()) {
+        resultDiv.textContent = "Please paste your essay before submitting.";
+        return;
+      }
+
+      resultDiv.textContent = "Grading your essay, please wait...";
+
+      try {
+        const response = await fetch('/grade', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ essay, subject, paper })
+        });
+
+        const data = await response.json();
+        if (data.error) {
+          resultDiv.textContent = "Error: " + data.error;
+        } else {
+          resultDiv.textContent = data.feedback;
+          localStorage.setItem('lastEssayFeedback', data.feedback);
+        }
+      } catch (err) {
+        resultDiv.textContent = "Something went wrong. Please try again.";
+      }
+    });
+
+    document.getElementById('subscribeBtn').addEventListener('click', async () => {
+      try {
+        const res = await fetch('/create-checkout-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await res.json();
+        if (data.url) {
+          window.location.href = data.url;
+        } else {
+          alert("Error creating Stripe session.");
+        }
+      } catch (err) {
+        alert("Subscription setup failed.");
+      }
+    });
+
+    window.onload = () => {
+      const saved = localStorage.getItem('lastEssayFeedback');
+      if (saved) {
+        resultDiv.textContent = saved;
+      }
+    };
+  </script>
+</body>
+</html>
